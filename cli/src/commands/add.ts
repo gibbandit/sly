@@ -12,6 +12,7 @@ import * as z from "zod"
 import { resolveTransformers } from "~/src/transformers.js"
 import { chooseLibrary, configureLibraries, initLibrary } from "./library.js"
 import { confirmOrQuit, confirm } from "../prompts.js"
+import { getPackageManager } from "../get-package-manager.js"
 
 function hasLibrary(config: Config, name: string) {
   return config?.libraries.find((lib) => lib.name === name)
@@ -199,7 +200,6 @@ export const add = new Command()
         continue
       }
 
-      // TODO: support hipster package managers
       if (item.dependencies.length || item.devDependencies.length) {
         const shouldInstall = await confirm(
           [
@@ -215,16 +215,26 @@ export const add = new Command()
         )
 
         if (shouldInstall) {
+
+          const packageManager = await getPackageManager()
+
           if (item.dependencies?.length) {
-            await execa("npm", ["install", ...item.dependencies])
+            await execa(
+              packageManager,
+              [
+                packageManager === "npm" ? "install" : "add",
+                ...item.dependencies,
+              ])
           }
 
           if (item.devDependencies?.length) {
-            await execa("npm", [
-              "install",
-              "--save-dev",
-              ...item.devDependencies,
-            ])
+            await execa(
+              packageManager,
+              [
+                packageManager === "npm" ? "install" : "add",
+                "-D",
+                ...item.devDependencies,
+              ])
           }
         }
       }
